@@ -1,0 +1,53 @@
+#!/usr/bin/expect
+
+# keep commented to see what's going on
+log_user 0
+
+# For common functionality
+source [file dirname [info script]]/../fw-control.exp
+
+if {[info exists argv0] && [
+	file dirname [file normalize [info script]/...]] eq [
+	file dirname [file normalize $argv0/...]]} {
+
+	set _command "system"
+
+	while {[llength $argv]} {
+		set argv [lassign $argv[set argv {}] flag]
+
+		switch -glob $flag {
+			-h* {
+				set _command "help $_command"
+				break
+			}
+			-d {
+				append _command " " "-d"
+			}
+			-- break
+			* {
+				return -code error [list {unknown option} $flag]
+			}
+			default {
+				break
+			}
+		}
+	}
+}
+
+exp_spawn -open [open $_serialPort w+]
+exp_stty raw < $_serialPort
+exp_stty ispeed $_serialBaudRate ospeed $_serialBaudRate raw -echo $_serialBits $_serialParity $_serialStopBit onlcr < $_serialPort
+
+enterCommandMonitor
+
+send "$_command\r"
+expect "$_prompt"
+
+set _list [split $expect_out(buffer) \n]
+
+set _commandOutput [ lrange $_list 1 end-1 ]
+
+send_user "[ join $_commandOutput "\n" ]\n"
+
+exit
+

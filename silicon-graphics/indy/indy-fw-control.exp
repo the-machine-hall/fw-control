@@ -1,0 +1,22 @@
+#!/usr/bin/expect
+
+# For common functionality
+source [file dirname [info script]]/../fw-control.exp
+
+proc setMacAddress {_newMacAddress} {
+
+	sendPromCommand "setenv -f eaddr $_newMacAddress"
+}
+
+
+proc setDate {{_newDate ""}} {
+
+	if {$_newDate == ""} {
+
+		# get current date and format as needed by the `date` PROM command
+		set _newDate [clock format [clock seconds] -gmt 1 -format {%m%d%H%M%Y.%S}]
+	}
+
+	sendPromCommand "date $_newDate"
+}
+

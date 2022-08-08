@@ -1,0 +1,20 @@
+#!/usr/bin/expect
+
+source [file dirname [info script]]/indy-fw-control.exp
+
+set _serialBaudRate "9600"
+set _serialBits "cs8"
+set _serialParity "-parenb"
+set _serialStopBit "-cstopb"
+
+exp_spawn -open [open $_serialPort w+]
+exp_stty raw < $_serialPort
+exp_stty ispeed $_serialBaudRate ospeed $_serialBaudRate raw -echo $_serialBits $_serialParity $_serialStopBit onlcr < $_serialPort
+
+enterCommandMonitor
+
+# Don't wait for prompt here
+send "off\r"
+
+exit
+

@@ -1,0 +1,84 @@
+#!/usr/bin/expect
+
+# keep commented to see what's going on
+log_user 0
+
+# For common functionality
+source [file dirname [info script]]/../fw-control.exp
+
+if {[info exists argv0] && [
+	file dirname [file normalize [info script]/...]] eq [
+	file dirname [file normalize $argv0/...]]} {
+
+	set _command "hinv"
+
+	while {[llength $argv]} {
+		set argv [lassign $argv[set argv {}] flag]
+
+		switch -glob $flag {
+			-h* {
+				append _command " " "-h"
+				# Example:
+				#
+				# >> hinv -h
+				# Usage: hinv [-v] [-m] [-mvvv] [-g PATH]:
+				#                                  Display hardware inventory
+				break
+			}
+			-v {
+				append _command " " "-v"
+			}
+			-m {
+				append _command " " "-m"
+			}
+			-mvvv {
+				append _command " " "-mvvv"
+			}
+			-g {
+				# This option actually has an argument,
+				# but when a valid argument is used, it
+				# just prints out that argument
+				#
+				# Example:
+				#
+				# >> hinv -g
+				# /hw/module/1/slot/MotherBoard/node/cpu/0
+				# /hw/module/1/slot/MotherBoard/node/cpu/1
+				# /hw/module/1/slot/MotherBoard/node/mem
+				# /hw/module/1/slot/MotherBoard/node/xtalk/8/pci/0/scsi_ctlr/0/target
+				# /hw/module/1/slot/MotherBoard/node/xtalk/8/pci/1/scsi_ctlr/0/target/6/lun/0/cdrom
+				# /hw/module/1/slot/MotherBoard/node/xtalk/8/pci/2/ioc30
+				# /hw/module/1/slot/MotherBoard/node/xtalk/8/pci/2/ioc31
+				# /hw/module/1/slot/MotherBoard/node/xtalk/8/pci/2/ef
+				# /hw/module/1/slot/MotherBoard/node/xtalk/8/pci/2/ioc3ms
+				# /hw/module/1/slot/MotherBoard/node/xtalk/8/pci/5
+				append _command " " "-g"
+			}
+			-- break
+			* {
+				return -code error [list {unknown option} $flag]
+			}
+			default {
+				break
+			}
+		}
+	}
+}
+
+exp_spawn -open [open $_serialPort w+]
+exp_stty raw < $_serialPort
+exp_stty ispeed $_serialBaudRate ospeed $_serialBaudRate raw -echo $_serialBits $_serialParity $_serialStopBit onlcr < $_serialPort
+
+enterCommandMonitor
+
+send "$_command\r"
+expect "$_prompt"
+
+set _list [split $expect_out(buffer) \n]
+
+set _commandOutput [ lrange $_list 1 end-1 ]
+
+send_user "[ join $_commandOutput "\n" ]\n"
+
+exit
+

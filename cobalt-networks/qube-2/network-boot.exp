@@ -1,0 +1,29 @@
+#!/usr/bin/expect
+
+#log_user 0
+
+set send_human {.1 .3 1 .05 2}
+
+# For terminal settings and prompt
+source [file dirname [info script]]/config/config.tcl
+
+# If first argument is provided it should be the serial port to use
+if { [lindex $argv 0] != "" } {
+
+        set _serialPort [lindex $argv 0]
+}
+
+exp_spawn -open [open $_serialPort w+]
+exp_stty raw < $_serialPort
+exp_stty ispeed $_serialBaudRate ospeed $_serialBaudRate raw -echo $_serialBits -parenb -cstopb onlcr < $_serialPort
+
+# Send CR to to make the firmware showing its prompt. Just in case the machine was already started a longer
+# time ago and the serial connection was made after the initial prompt was shown.
+send "\r"
+
+expect "$_prompt"
+send -h "$_netbootCommand"
+
+expect "$_prompt"
+
+exit

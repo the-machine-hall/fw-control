@@ -1,0 +1,39 @@
+#!/usr/bin/expect
+
+# For terminal settings, _prompt and other variables
+source [file dirname [info script]]/config/config.tcl
+
+set send_human {.1 .3 1 .05 2}
+
+proc connectToSerialConsole {_serialPort {_serialBaudRate "9600"} {_serialBits "cs8"} {_serialParity "-parenb"} {_serialStopBit "-cstopb"}} {
+
+	exp_spawn -open [open $_serialPort w+]
+	exp_stty raw < $_serialPort
+	exp_stty ispeed $_serialBaudRate ospeed $_serialBaudRate raw -echo $_serialBits $_serialParity $_serialStopBit onlcr < $_serialPort
+}
+
+
+proc enterCommandMonitor {} {
+
+	variable _prompt
+
+	while { 1 } {
+
+		send "\r"
+		expect {
+			"press <Esc>" { send "\033" }
+			"Option? " { send "5\r"; expect "$_prompt" { break } }
+			"$_prompt" break
+		}
+	}
+}
+
+
+proc sendPromCommand {{_promCommand ""}} {
+
+	variable _prompt
+
+	send "$_promCommand\r"
+	expect "$_prompt"
+}
+

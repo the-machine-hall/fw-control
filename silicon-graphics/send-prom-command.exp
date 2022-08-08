@@ -1,0 +1,17 @@
+#!/usr/bin/expect
+
+# keep commented to see what's going on
+#log_user 0
+
+source [file dirname [info script]]/fw-control.exp
+
+exp_spawn -open [open $_serialPort w+]
+exp_stty raw < $_serialPort
+exp_stty ispeed $_serialBaudRate ospeed $_serialBaudRate raw -echo $_serialBits $_serialParity $_serialStopBit onlcr < $_serialPort
+
+enterCommandMonitor
+
+sendPromCommand "$argv"
+
+exit
+

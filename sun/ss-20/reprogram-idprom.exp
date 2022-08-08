@@ -1,0 +1,179 @@
+#!/usr/bin/expect
+
+# keep commented to see what's going on
+#log_user 0
+
+# For terminal settings, _prompt and other variables
+source [file dirname [info script]]/config/config.tcl
+
+########################################################################
+
+proc showIDPROM {} {
+
+	variable _prompt
+
+	expect "$_prompt"
+	send -h ".idprom\r"
+}
+
+
+proc showBanner {} {
+
+	variable _prompt
+
+	expect "$_prompt"
+	send -h "banner\r"
+}
+
+
+proc printNVRAMEnv {} {
+
+	variable _prompt
+
+	expect "$_prompt"
+	send -h "printenv\r"
+	expect "More * ? "
+	send -h " "
+}
+
+
+proc setNVRAMVar { _var _value } {
+
+	variable _prompt
+
+	expect "$_prompt"
+	send -h "setenv $_var $_value\r"
+}
+
+
+proc resetMachine {} {
+
+	variable _prompt
+
+	expect "$_prompt"
+	send -h "reset\r"
+	send_user "reset\r\n"
+}
+
+
+proc setNVRAMDefaults {} {
+
+	variable _prompt
+
+	expect "$_prompt"
+	send -h "set-defaults\r"
+}
+
+
+proc reprogramIDPROM { _realMachineType _macAddressByte3 _macAddressByte4 _macAddressByte5 } {
+
+	variable _prompt
+
+	expect "$_prompt"
+	send -h "1 0 mkp\r"
+
+	expect "$_prompt"
+	send -h "$_realMachineType 1 mkp\r"
+
+	expect "$_prompt"
+	send -h "8 2 mkp\r"
+
+	expect "$_prompt"
+	send -h "0 3 mkp\r"
+
+	expect "$_prompt"
+	send -h "20 4 mkp\r"
+
+	expect "$_prompt"
+	send -h "$_macAddressByte3 5 mkp\r"
+
+	expect "$_prompt"
+	send -h "$_macAddressByte4 6 mkp\r"
+
+	expect "$_prompt"
+	send -h "$_macAddressByte5 7 mkp\r"
+
+	expect "$_prompt"
+	send -h "0 8 mkp\r"
+
+	expect "$_prompt"
+	send -h "0 9 mkp\r"
+
+	expect "$_prompt"
+	send -h "0 a mkp\r"
+
+	expect "$_prompt"
+	send -h "0 b mkp\r"
+
+	expect "$_prompt"
+	send -h "$_macAddressByte3 c mkp\r"
+
+	expect "$_prompt"
+	send -h "$_macAddressByte4 d mkp\r"
+
+	expect "$_prompt"
+	send -h "$_macAddressByte5 e mkp\r"
+
+	expect "$_prompt"
+	send -h "0 f 0 do i idprom@ xor loop f mkp\r"
+}
+##################################################################
+
+if { [lindex $argv 0] != "" } {
+
+	set _serialPort [lindex $argv 0]
+}
+
+set send_human {.1 .3 1 .05 2}
+
+exp_spawn -open [open $_serialPort w+]
+exp_stty raw < $_serialPort
+exp_stty ispeed $_serialBaudRate ospeed $_serialBaudRate raw -echo $_serialBits -parenb -cstopb onlcr < $_serialPort
+
+while { 1 } {
+
+	send -break
+
+	expect {
+		# when ok prompt appears, break from while loop
+		"$_prompt" break
+		# when running into timeout, send break
+		timeout	{ send -break }
+	}
+
+	sleep 1
+}
+
+# start with sane defaults in the NVRAM (as recommended in the Sun NVRAM
+# FAQ)
+setNVRAMDefaults
+
+printNVRAMEnv
+
+########################################################################
+# Reprogram IDPROM
+########################################################################
+# start with printout of current content
+showIDPROM
+
+reprogramIDPROM "$_realMachineType" "$_macAddressByte3" "$_macAddressByte4" "$_macAddressByte5"
+
+# end with printout of current content and banner output
+showIDPROM
+showBanner
+########################################################################
+
+#setNVRAMVar "boot-device" "net-tpe"
+#setNVRAMVar "auto-boot?" "true"
+
+resetMachine
+
+#while { 1 } {
+#
+#	expect {
+#		"login: " break
+#	}
+#}
+
+exit
+
